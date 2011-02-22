@@ -51,6 +51,7 @@ class FeatureFlipperService {
       } else {
         f.roles = []
       }
+      updateFeaturesConfig()
     } else {
       //create new
       def newFeature = new Feature()
@@ -64,7 +65,7 @@ class FeatureFlipperService {
         servletContext?.features = []
       }
       servletContext?.features << newFeature
-      updateFeaturesXML()
+      updateFeaturesConfig()
     }
   }
 
@@ -75,13 +76,26 @@ class FeatureFlipperService {
     def f = servletContext?.features.find {it.name.toString() == featureName?.toString()}
     if (f) {
       servletContext?.features.remove(f)
-      updateFeaturesXML()
+      updateFeaturesConfig()
     } else {
       log.error "Feature cannot be found in Feature List"
     }
   }
 
+  /**
+   * Delegator that persists the features - determines how to save the feature settings
+   * **/
+  private updateFeaturesConfig() {
+    if (servletContext?.featureFlipperConfig == "xml") {
+      updateFeaturesXML()
+    } else if (servletContext?.featureFlipperConfig == "slurper") {
+      updateFeaturesSlurper()
+    }
+  }
 
+  /**
+   * Save the features as an XML file
+   * **/
   private updateFeaturesXML() {
     try {
       def sw = new StringWriter()
@@ -102,11 +116,33 @@ class FeatureFlipperService {
       }
 
       //save the xml file
-      def config = ConfigurationHolder.config
-      def flipperConfigPath = (config.featureFlipper.flipperConfigPath) ?: "FeatureFlipper.xml"
+      def flipperConfigPath = (ConfigurationHolder.config.featureFlipper.flipperConfigPath) ?: "FeatureFlipper.xml"
       new File(flipperConfigPath).write(sw.toString())
     } catch (Exception e) {
       log.error "Unable to write the FeatureFlipper XML file: ${e}"
+    }
+  }
+
+  /**
+   * Save the features as a ConfigSlurper file
+   * **/
+  private updateFeaturesSlurper() {
+    def flipperConfigPath = (ConfigurationHolder.config.featureFlipper.flipperConfigPath) ?: "FeatureFlipperConfig.groovy"
+
+    def configObj = new ConfigObject()
+    configObj.features = []
+
+    servletContext?.features.each { feature ->
+        configObj.features << [
+          name:feature.name,
+          description:feature.description,
+          active : feature.active,
+          roles : feature.roles
+        ]
+    }
+
+    new File(flipperConfigPath).withWriter { writer ->
+      configObj.writeTo(writer)
     }
   }
 }

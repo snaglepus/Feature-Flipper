@@ -137,23 +137,38 @@ server as well as supporting security Roles.
     }
   }
 
-
   private readConfigFile(application) {
     def config = ConfigurationHolder.config
 
-    def flipperConfigPath = (config.featureFlipper.flipperConfigPath) ?: "FeatureFlipper.xml"
+//    def flipperConfigPath = (config.featureFlipper.flipperConfigPath) ?: "FeatureFlipper.xml"
+    def flipperConfigPath = (config.featureFlipper.flipperConfigPath) ?: "FeatureFlipperConfig.groovy"
+
+    //now check if there is an old default XML one exists
+    if (new File("FeatureFlipper.xml").exists()) {
+      flipperConfigPath = "FeatureFlipper.xml"
+    }
 
     if (new File(flipperConfigPath).exists()) {
       //read a config file
-      loadConfig(new File(flipperConfigPath).text, application)
+      if (flipperConfigPath.endsWith(".xml")) {
+        loadXMLConfig(new File(flipperConfigPath).text, application)
+      } else if (flipperConfigPath.endsWith(".groovy")) {
+        loadSlurperConfig(flipperConfigPath, application)
+      }
     } else {
       //create an Empty file
-      new File(flipperConfigPath).append("<features></features>")
+//      def emptyConfig = []
+//      new File(flipperConfigPath).withWriter { writer ->
+//        emptyConfig.writeTo(writer)
+//      }
+      new File(flipperConfigPath).append("")
+      application.servletContext.featureFlipperConfig = "slurper"
     }
   }
 
-  private loadConfig(config, application) {
-    def content = parseConfig(config)
+  private loadXMLConfig(config, application) {
+    def content = parseXMLConfig(config)
+    application.servletContext.featureFlipperConfig = "xml"
     application.servletContext.features = []
 
     content.featureitem.each { feature ->
@@ -174,12 +189,41 @@ server as well as supporting security Roles.
     }
   }
 
-  private parseConfig(config) {
+  private loadSlurperConfig(configPath, application) {
+    def content = parseSlurperConfig(configPath)
+    application.servletContext.featureFlipperConfig = "slurper"
+    application.servletContext.features = []
+    content.features.each { feature ->
+      if (!application.servletContext.features.collect {it.name}.contains(feature?.name?.toString()) && feature?.name && feature?.name != "" ) {
+        def f = new Feature()
+        f.name = feature?.name?.toString()
+        f.description = feature?.description?.toString()
+        f.active = feature?.active//(feature?.active == "true") ? true : false
+        if (feature?.roles) {
+          f.roles = []
+          feature?.roles.each {
+            f.roles << it.toString()
+          }
+        }
+        application.servletContext.features << f
+      }
+    }
+  }
+
+  private parseSlurperConfig(configPath) {
+    try {
+      return new ConfigSlurper().parse(new File(configPath).toURL())
+    } catch (Exception e) {
+      println "Unable to Parse Feature Flipper Configuration File"      
+    }
+  }
+
+  private parseXMLConfig(config) {
     try {
       def parsed = new XmlSlurper().parseText(config)
       return parsed
     } catch (Exception e) {
-      log.error "Unable to Parse Feature Flipper Configuration File"
+      println "Unable to Parse Feature Flipper Configuration File"
     }
   }
 }
