@@ -1,0 +1,35 @@
+<plugin name='feature-flipper' version='0.1' grailsVersion='1.3.5 &gt; *'>
+  <author>Rob James</author>
+  <authorEmail>james.rob@gmail.com</authorEmail>
+  <title>Feature Flipping per server</title>
+  <description>\
+Provides a mechanism to be developing features and deploying them into production and 'flipping' the features on or off.
+Feature definitions are stored in an XML file and methods are provided to manage this file. Supports configuration per
+server as well as supporting security Roles.
+</description>
+  <documentation>http://grails.org/plugin/feature-flipper</documentation>
+  <resources>
+    <resource>BuildConfig</resource>
+    <resource>Config</resource>
+    <resource>DataSource</resource>
+    <resource>UrlMappings</resource>
+    <resource>com.posse.FeatureFlipperService</resource>
+    <resource>com.posse.FeatureFlipperTagLib</resource>
+  </resources>
+  <dependencies>
+    <plugin name='controllers' version='1.3.5 &gt; *' />
+    <plugin name='services' version='1.3.5 &gt; *' />
+    <plugin name='logging' version='1.3.5 &gt; *' />
+  </dependencies>
+  <behavior>
+    <method name='hasFeature' artefact='Service' type='com.posse.FeatureFlipperService'>
+      <description />
+      <argument type='java.lang.Object' />
+    </method>
+    <method name='hasFeature' artefact='Service' type='com.posse.FeatureFlipperService'>
+      <description />
+      <argument type='java.lang.Object' />
+      <argument type='java.lang.Object' />
+    </method>
+  </behavior>
+</plugin>
